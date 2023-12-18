@@ -151,3 +151,7 @@ def test_laser():
     print('Enable laser', send_command(device, ENABLE_LASER, (), read=True))
     sleep(1)
     print('Disable laser', send_command(device, DISABLE_LASER, (), read=True))
+
+
+if __name__ == '__main__':
+    test_laser()
