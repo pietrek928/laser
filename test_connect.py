@@ -78,6 +78,11 @@ GET_MARK_TIME          = 0x0041 # Seen at end of cutting, only and always called
 SET_FPK_PARAM          = 0x0062 # Probably "first pulse killer" = fpk
 
 
+OP_CUT = 0x8005
+OP_SET_LASER_POWER = 0x8012
+OP_LASER_CONTROL = 0x8021
+
+
 USB_EP_HODI = 0x01  # endpoint for the "dog," i.e. dongle.
 USB_EP_HIDO = 0x81  # fortunately it turns out that we can ignore it completely.
 USB_EP_HOMI = 0x02  # endpoint for host out, machine in. (query status, send ops)
@@ -111,8 +116,9 @@ def send_command(device: usb.core.Device, command, parameters: Tuple[int], read=
     values = [0] * 6
     values[0] = command
     values [1:1+len(parameters)] = parameters
-    command_bytes = sum(v.to_bytes(2, byteorder='little') for v in values)
-    if device.write(USB_EP_HODI, command_bytes, 100) != len(command_bytes):
+    command_bytes = b''.join(v.to_bytes(2, byteorder='little') for v in values)
+    print(command_bytes)
+    if device.write(USB_EP_HOMI, command_bytes, 100) != len(command_bytes):
         raise ValueError("Could not send command")
 
     if not read:
@@ -133,8 +139,6 @@ def send_command(device: usb.core.Device, command, parameters: Tuple[int], read=
 def check_device_ready(device):
     print("Checking device ready...")
     status, _, _ = send_command(device, READ_PORT, (), read=True)
-    if status != 0x0000:
-        raise ValueError("Device not ready")
     return bool(status & 0x20)
 
 
@@ -149,6 +153,16 @@ def test_laser():
     print('Get xy position', send_command(device, GET_XY_POSITION, (), read=True))
 
     print('Enable laser', send_command(device, ENABLE_LASER, (), read=True))
+    print('Set laser mode', send_command(device, SET_LASER_MODE, (1, )))
+    print('Set standby', send_command(device, SET_STANDBY, ()))
+    print('Set PWM half period', send_command(device, SET_PWM_HALF_PERIOD, (125, ), read=True))
+    print('Set PWM', send_command(device, SET_PWM_PULSE_WIDTH, (125, ), read=True))
+    print('Fiber open', send_command(device, FIBER_OPEN_MO, ()))
+    # print('Linght on', send_command(device, WRITE_PORT, (1 << 8, ), read=True))
+
+    print('Set laser on', send_command(device, OP_LASER_CONTROL, (1, )))
+    print('Set laser power', send_command(device, OP_SET_LASER_POWER, (125, )))
+    print('Test cut', send_command(device, OP_CUT, (0x8000, 0x8000, 10, 10)))
     sleep(1)
     print('Disable laser', send_command(device, DISABLE_LASER, (), read=True))
 
